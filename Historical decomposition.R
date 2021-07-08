@@ -1,7 +1,7 @@
 library(tidyverse)
 library(HMDHFDplus)
 
-### parameters ###
+### Selection of parameters ###
 country<-"DNK"
 year = 2018
 yeard = 10
@@ -15,7 +15,7 @@ username.hmd = ""
 password.hmd = ""
 ### 
 
-#### data ####
+#### Read data ####
 ## HFD data
 Birth <- readHFDweb(CNTRY = country, item = "birthsTR", username =
                             username.hfd, password = password.hfd)
@@ -43,7 +43,7 @@ Death$Cohort<-as.numeric(Death$Cohort)
 Death$Age[Death$Age=="110+"]<-110
 Death$Age<-as.numeric(Death$Age)
 
-#### R ####
+#### R = population growth rate ####
 pop1 <- Pop %>% filter(Year == year) %>% summarise(sum(Female)) %>% as.numeric()
 pop2 <- Pop %>% filter(Year == year-yeard) %>% summarise(sum(Female)) %>% as.numeric()
 R = log(pop1/pop2)/yeard
@@ -60,11 +60,11 @@ for (a in 0:age) {
   temp <- log(pop1/pop2)/yeard
   rx = append(rx,temp)
   
-  #### rB ####
+  #### rB = growth rate at birth####
   temp<-log(Tot.Birth.F$Female[which(Tot.Birth.F$Year==year-a-1)]/Tot.Birth.F$Female[which(Tot.Birth.F$Year==year-yeard-a-1)])/yeard
   rB = append(rB,temp)
   
-  #### dS ####
+  #### dS = change in survival ####
   ## qx is calculated by eq.81 in HMD Methods protocol v6
   qx1 = Death %>% filter(Cohort == year-a-1,Age <= a) %>% select(1:4)
   qx1$Female[which(qx1$Year == year)] = 0
@@ -108,20 +108,20 @@ dS[is.na(dS)] <- 0
 dS[is.nan(dS)] <- 0
 dS[is.infinite(dS)] <- 0
 
-#### mi ####
+#### mi = change in net migration ####
 mi<-rx-rB-dS
 
-#### Cx ####
+#### Cx = population composition ####
 pop <- Pop %>% filter(Year == year-yeard) %>% filter(Age %in% c(0:age)) %>% pull(Female)
 pop2 <- pop * exp(rx*0.5*yeard)
 Cx = pop2/sum(pop2)
 ####
 
-#### For male results, change all `Female` in `Male` above this line. No changes needed beyone #### 
+#### Results for males can be obtained by changing all the `Female` into `Male` above this line. Do NOT change anything beyond here #### 
 
-R - sum(Cx * rx) # error is very small
+R - sum(Cx * rx) # Difference between population growth and the average growth is very small
 
-# Figure 1
+# Figure 1 including age-specific growth rates, growth rate at birth, survival change and migration change
 Age = 0:age
 deco1 = data.frame(Age,rx,dS,mi,rB,Cx)
 deco1 = pivot_longer(deco1,2:5)
@@ -144,7 +144,7 @@ t1$Sum <- round(t1$Sum ,5)* 100
 t1
 
 
-#### rxf ####
+#### rxf = growth rate of mothers ####
 ### rB = sum(rf*CB) + sum(rx2*CB)
 ### rxf = sum(rx2*CB)
 B <- Birth %>% group_by(Year,Age) %>%
@@ -178,12 +178,12 @@ for (a in 0:age) {
   rxf = append(rxf,temp)
 }
 
-#### rf ####
+#### rf = changes in fertility ####
 ### rf = rB - sum(rx2*CB)
 rf = rB-rxf 
 ####
 
-# Figure 2
+# Figure 2 including age-specific growth rates, growth rate at birth, fertility change and growth rate of mothers
 Age = 0:age
 deco2 = data.frame(Age,rx,rB,dS,mi,rf,rxf,Cx)
 deco2 = pivot_longer(deco2,2:7)
