@@ -3,8 +3,11 @@ library(HMDHFDplus)
 
 ### Selection of parameters ###
 country<-"DNK"
-year = 2018
+# h
 yeard = 10
+# t+h (t is 2008 in this case)
+year = 2018
+# Decompose from age 0 to age 100 (for countries with shorter time series, decreasing 'age' may give results)
 age=100
 
 # Enter your HFD username and password
@@ -47,14 +50,13 @@ Death$Age<-as.numeric(Death$Age)
 pop1 <- Pop %>% filter(Year == year) %>% summarise(sum(Female)) %>% as.numeric()
 pop2 <- Pop %>% filter(Year == year-yeard) %>% summarise(sum(Female)) %>% as.numeric()
 R = log(pop1/pop2)/yeard
-####
+
 
 rB = c()
 rx = c()
 dS = c()
-
 for (a in 0:age) {
-  #### rx ####
+  #### rx = age-specific population growth rate ####
   pop1 <- Pop %>% filter(Year == year,Age == a) %>% pull(Female)
   pop2 <- Pop %>% filter(Year == year-yeard,Age == a) %>% pull(Female)
   temp <- log(pop1/pop2)/yeard
@@ -97,7 +99,6 @@ for (a in 0:age) {
   
   temp <- log(lx1/lx2)/yeard
   dS = append(dS,temp)
-  
 }
 
 rx[is.na(rx)] <- 0
@@ -115,7 +116,6 @@ mi<-rx-rB-dS
 pop <- Pop %>% filter(Year == year-yeard) %>% filter(Age %in% c(0:age)) %>% pull(Female)
 pop2 <- pop * exp(rx*0.5*yeard)
 Cx = pop2/sum(pop2)
-####
 
 #### Results for males can be obtained by changing all the `Female` into `Male` above this line. Do NOT change anything beyond here #### 
 
@@ -153,6 +153,7 @@ CB <- c()
 rx2 <- c()
 rxf <- c()
 for (a in 0:age) {
+  ## composition of births born to women （assuming male birth and female birth have the same composition)
   B1 <- B %>% filter(Year == (year-a-1)) %>% pull(SUMM)
   B2 <- B %>% filter(Year == (year-yeard-a-1)) %>% pull(SUMM)
   if(length(B2)!=0){
@@ -162,7 +163,7 @@ for (a in 0:age) {
     r.tem[is.nan(r.tem)] <- 0
     r.tem[is.infinite(r.tem)] <- 0
     
-    B3 <- B2/2.05 * exp(r.tem*0.5*yeard) 
+    B3 <- B2 * exp(r.tem*0.5*yeard) 
     
     temp.CB = B3/sum(B3)
   }
@@ -204,5 +205,7 @@ t2$name <- recode(t2$name,rx="Growth Rate (rx)",rB="Growth rate at birth (rB)",r
 t2$name <- factor(t2$name,levels = c("Growth Rate (rx)","Growth rate at birth (rB)","Fertility (df)","Residual (rxf)"))
 t2$Sum <- round(t2$Sum ,5)* 100
 t2
-### For more iterations please email tianyu.shen@anu.edu.au
+
+
+#### For more iterations please email tianyu.shen@anu.edu.au ####
 
